@@ -1,0 +1,49 @@
+# Example: Google AX Task with Zero-Egress Sandbox and AxContextBinding
+apiVersion: agent.google.com/v1alpha1
+kind: Task
+metadata:
+  name: incident-analyst-task-42
+  namespace: agent-workloads
+spec:
+  modelRef:
+    name: gemini-2-5-pro
+  workspaceRef:
+    name: analyst-scratchpad-ws
+  runtimeClass: gvisor # Enforces runsc kernel sandbox isolation
+  networkPolicy:
+    egress:
+      mode: DenyAll # Strict Zero-Trust: no external internet access allowed
+  template:
+    containers:
+      - name: agent-runner
+        image: ghcr.io/aah20/autonomous-analyst:v1.0.0
+        env:
+          - name: MCP_SOCKET_PATH
+            value: /var/run/ax-context/mcp.sock
+        volumeMounts:
+          - name: ax-context-socket
+            mountPath: /var/run/ax-context
+            readOnly: false
+    volumes:
+      - name: ax-context-socket
+        emptyDir:
+          medium: Memory
+---
+apiVersion: agent.google.com/v1alpha1
+kind: AxContextBinding
+metadata:
+  name: incident-analyst-task-42-binding
+  namespace: agent-workloads
+spec:
+  targetTaskRef:
+    name: incident-analyst-task-42
+  tenantId: enterprise-acme-corp
+  agentId: secops-reconciliation-agent
+  contextPolicy:
+    maxContextTokens: 4096
+    maxGraphHops: 2
+    similarityThreshold: 0.75
+    enforceTombstones: true
+  snapshotConfig:
+    autoCheckpointOnSuspend: true
+    storageUri: "s3://acme-agent-snapshots/secops-reconciliation-agent/"

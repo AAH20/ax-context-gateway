@@ -1,0 +1,93 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: axcontextbindings.agent.google.com
+spec:
+  group: agent.google.com
+  names:
+    kind: AxContextBinding
+    listKind: AxContextBindingList
+    plural: axcontextbindings
+    singular: axcontextbinding
+    shortNames:
+      - axcb
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - targetTaskRef
+                - tenantId
+                - agentId
+                - contextPolicy
+              properties:
+                targetTaskRef:
+                  type: object
+                  required:
+                    - name
+                  properties:
+                    name:
+                      type: string
+                    namespace:
+                      type: string
+                tenantId:
+                  type: string
+                  description: "Multi-tenant partition key ensuring strict data isolation."
+                agentId:
+                  type: string
+                  description: "Unique logical agent descriptor."
+                contextPolicy:
+                  type: object
+                  required:
+                    - maxContextTokens
+                    - maxGraphHops
+                  properties:
+                    maxContextTokens:
+                      type: integer
+                      minimum: 128
+                      maximum: 131072
+                      default: 4096
+                    maxGraphHops:
+                      type: integer
+                      minimum: 1
+                      maximum: 5
+                      default: 2
+                    similarityThreshold:
+                      type: number
+                      minimum: 0.0
+                      maximum: 1.0
+                      default: 0.70
+                    enforceTombstones:
+                      type: boolean
+                      default: true
+                snapshotConfig:
+                  type: object
+                  properties:
+                    autoCheckpointOnSuspend:
+                      type: boolean
+                      default: true
+                    storageUri:
+                      type: string
+                      description: "Persistent storage URI or PVC for state snapshots."
+            status:
+              type: object
+              properties:
+                phase:
+                  type: string
+                  enum: ["Pending", "Bound", "Injected", "Suspended", "Finalized", "Failed"]
+                contextHash:
+                  type: string
+                  description: "SHA-256 digest of pre-flight compiled context bundle."
+                allocatedTokens:
+                  type: integer
+                lastCheckpointHash:
+                  type: string
+                lastTransitionTime:
+                  type: string
